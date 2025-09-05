@@ -1,3 +1,34 @@
+# Budget
+
+Budget is a personal finance React app scaffolded from the `spark-template` workspace.
+
+Quick start
+
+```bash
+npm install
+npm run dev
+```
+
+Build
+
+```bash
+npm run build
+```
+
+Development
+
+- App entry: `src/main.tsx`
+- Frontend: Vite + React + Tailwind
+
+Contributing
+
+1. Create a branch for your change: `git checkout -b feat/my-feature`
+2. Run lint/tests and commit.
+3. Push and open a pull request.
+
+License
+
+This project is licensed under the terms in `LICENSE`.
 # ✨ Welcome to Your Spark Template!
 You've just launched your brand-new Spark Template Codespace — everything’s fired up and ready for you to explore, build, and create with Spark!
 
