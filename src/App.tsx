@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useKV } from '@github/spark/hooks';
+import { useResponsive } from '@/hooks/useResponsive';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,11 @@ import { ImportWizard } from '@/components/ImportWizard';
 import { TransactionList } from '@/components/TransactionList';
 import { BudgetManager } from '@/components/BudgetManager';
 import { InsightsDashboard } from '@/components/InsightsDashboard';
+import { MobileNavigation } from '@/components/mobile/MobileNavigation';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { MobileDashboard } from '@/components/mobile/MobileDashboard';
+import { MobileTransactionList } from '@/components/mobile/MobileTransactionList';
+import { MobileImportWizard } from '@/components/mobile/MobileImportWizard';
 import { Transaction, Budget, CategoryRule, Category } from '@/types';
 import { DEFAULT_CATEGORIES, DEFAULT_RULES, generateRuleFromEdit } from '@/lib/categories';
 import { detectDuplicates, detectTransfers, applyCategoryRules } from '@/lib/parsers';
@@ -28,6 +34,8 @@ function App() {
   const [rules, setRules] = useKV<CategoryRule[]>('category-rules', DEFAULT_RULES);
   const [showTransfers, setShowTransfers] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  const { isMobile } = useResponsive();
 
   const handleImportComplete = useCallback((newTransactions: Transaction[]) => {
     setTransactions(currentTransactions => {
@@ -123,6 +131,107 @@ function App() {
   const transferTransactions = transactions.filter(t => t.isTransfer);
   const visibleTransactions = showTransfers ? transactions : nonTransferTransactions;
 
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background pb-20">
+        <MobileHeader
+          activeTab={activeTab}
+          transactionCount={transactions.length}
+          budgetCount={budgets.length}
+          ruleCount={rules.filter(r => r.learnedFromEdit).length}
+          showTransfers={showTransfers}
+          onToggleTransfers={() => setShowTransfers(!showTransfers)}
+          onClearData={handleClearData}
+        />
+
+        <main className="px-4 py-4">
+          {activeTab === 'dashboard' && (
+            transactions.length > 0 ? (
+              <MobileDashboard
+                transactions={transactions}
+                categories={categories}
+                budgets={budgets}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <Wallet className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h2 className="text-xl font-semibold mb-2">No data yet</h2>
+                <p className="text-muted-foreground mb-4">
+                  Import your first transactions to see insights and analytics
+                </p>
+                <Button onClick={() => setActiveTab('import')}>
+                  <FileArrowUp className="w-4 h-4 mr-2" />
+                  Import Transactions
+                </Button>
+              </div>
+            )
+          )}
+
+          {activeTab === 'import' && (
+            <MobileImportWizard onImportComplete={handleImportComplete} />
+          )}
+
+          {activeTab === 'transactions' && (
+            transactions.length > 0 ? (
+              <div className="space-y-4">
+                {showTransfers && transferTransactions.length > 0 && (
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      <Badge variant="secondary" className="mr-2">
+                        {transferTransactions.length}
+                      </Badge>
+                      account transfers detected and excluded from spending calculations
+                    </p>
+                  </div>
+                )}
+                <MobileTransactionList
+                  transactions={visibleTransactions}
+                  categories={categories}
+                  onUpdateTransaction={handleUpdateTransaction}
+                  onDeleteTransaction={handleDeleteTransaction}
+                  showTransfers={showTransfers}
+                />
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <FileArrowUp className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h2 className="text-xl font-semibold mb-2">No transactions found</h2>
+                <p className="text-muted-foreground mb-4">
+                  Import your bank statements to get started
+                </p>
+                <Button onClick={() => setActiveTab('import')}>
+                  Import Transactions
+                </Button>
+              </div>
+            )
+          )}
+
+          {activeTab === 'budgets' && (
+            <div className="pb-4">
+              <BudgetManager
+                budgets={budgets}
+                transactions={nonTransferTransactions}
+                categories={categories}
+                onUpdateBudget={handleUpdateBudget}
+                onCreateBudget={handleCreateBudget}
+                onDeleteBudget={handleDeleteBudget}
+              />
+            </div>
+          )}
+        </main>
+
+        <MobileNavigation
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          transactionCount={visibleTransactions.length}
+          budgetCount={budgets.length}
+        />
+      </div>
+    );
+  }
+
+  // Desktop layout (existing)
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
